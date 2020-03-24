@@ -1,13 +1,15 @@
 pipeline {
-    agent {
-      docker {
-        image 'maven:3.6.1-jdk-8-slim'
-        args '-v $HOME/.m2:/root/.m2'
-      }
-    }
+    agent none
 
     stages {
         stage('build') {
+            agent {
+              docker {
+                image 'maven:3.6.1-jdk-8-slim'
+                args '-v $HOME/.m2:/root/.m2'
+              }
+            }
+
             steps {
                 echo 'Compiling users app..'
                 dir('java/cmad-ms-users') {
@@ -16,6 +18,12 @@ pipeline {
             }
         }
         stage('test') {
+            agent {
+              docker {
+                image 'maven:3.6.1-jdk-8-slim'
+                args '-v $HOME/.m2:/root/.m2'
+              }
+            }
             steps {
                 echo 'Running unit tests on uers app..'
                 dir('java/cmad-ms-users') {
@@ -24,6 +32,12 @@ pipeline {
             }
         }
        stage('package') {
+            agent {
+              docker {
+                image 'maven:3.6.1-jdk-8-slim'
+                args '-v $HOME/.m2:/root/.m2'
+              }
+            }
             steps {
                 echo 'Packing users app..'
                 dir('java/cmad-ms-users') {
@@ -33,6 +47,20 @@ pipeline {
             }
         }
     }
+
+    stage('docker-package'){
+        agent any
+        steps{
+          echo 'Packaging users app with docker'
+          script{
+            docker.withRegistry('https://index.docker.io/v1/', 'dockerlogin') {
+                def usersImage = docker.build("snehah/users:v${env.BUILD_ID}", "./java/cmad-ms-users")
+                usersImage.push()
+                usersImage.push("latest")
+           }
+          }
+        }
+      }
 
     post {
       always {
